@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>うるおいチェッカー v1.0</title>
+<style>
+  :root{
+    --teal:#3AABA8;
+    --cream:#F5E4C4;
+    --orange:#E88A0A;
+    --blue:#2E8EC4;
+    --dark:#1f2a30;
+    --dark2:#2d3439;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:"Meiryo","メイリオ",sans-serif;
+    background:linear-gradient(160deg,var(--dark) 0%,var(--dark2) 100%);
+    color:#fff;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    overflow:hidden;
+  }
+  header{
+    width:100%;
+    text-align:center;
+    padding:28px 16px 18px;
+  }
+  h1{
+    margin:0;
+    font-size:clamp(28px,5vw,52px);
+    color:var(--cream);
+    letter-spacing:1px;
+    text-shadow:0 2px 8px rgba(0,0,0,.4);
+  }
+  .sub{
+    margin-top:8px;
+    font-size:clamp(14px,2.2vw,20px);
+    color:var(--teal);
+    font-weight:bold;
+  }
+  main{
+    flex:1;
+    width:100%;
+    max-width:760px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:10px 20px 30px;
+  }
+  /* 接続前のガイド */
+  #connectArea{
+    text-align:center;
+  }
+  #connectBtn{
+    font-family:inherit;
+    font-size:clamp(20px,3.4vw,30px);
+    font-weight:bold;
+    color:#fff;
+    background:var(--orange);
+    border:none;
+    border-radius:18px;
+    padding:22px 46px;
+    cursor:pointer;
+    box-shadow:0 6px 0 #b56b06,0 10px 20px rgba(0,0,0,.35);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  #connectBtn:active{
+    transform:translateY(4px);
+    box-shadow:0 2px 0 #b56b06,0 5px 12px rgba(0,0,0,.35);
+  }
+  .guide{
+    margin-top:26px;
+    font-size:clamp(15px,2.4vw,21px);
+    line-height:1.7;
+    color:#e9eef0;
+  }
+  .guide small{
+    display:block;
+    margin-top:14px;
+    font-size:clamp(12px,1.8vw,15px);
+    color:#9fb2b8;
+  }
+  /* 接続後のメイン表示 */
+  #liveArea{
+    display:none;
+    width:100%;
+    text-align:center;
+  }
+  .meterWrap{
+    width:100%;
+    max-width:560px;
+    margin:0 auto 22px;
+    background:rgba(255,255,255,.08);
+    border-radius:20px;
+    overflow:hidden;
+    height:34px;
+    border:2px solid rgba(255,255,255,.15);
+  }
+  #meterBar{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--blue),var(--teal));
+    transition:width .18s ease;
+  }
+  .valueLabel{
+    font-size:clamp(15px,2.2vw,20px);
+    color:var(--teal);
+    font-weight:bold;
+    margin-bottom:4px;
+  }
+  #valueNum{
+    font-size:clamp(70px,16vw,150px);
+    font-weight:900;
+    line-height:1;
+    color:#fff;
+    text-shadow:0 4px 16px rgba(0,0,0,.4);
+    font-variant-numeric:tabular-nums;
+  }
+  #rangeNote{
+    font-size:clamp(12px,1.8vw,15px);
+    color:#9fb2b8;
+    margin-top:2px;
+  }
+  #comment{
+    margin-top:26px;
+    font-size:clamp(26px,5vw,46px);
+    font-weight:bold;
+    color:var(--cream);
+    min-height:1.4em;
+    transition:color .2s ease;
+    text-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
+  #reconnectNote{
+    margin-top:30px;
+    font-size:clamp(11px,1.7vw,14px);
+    color:#7e9197;
+  }
+  footer{
+    width:100%;
+    text-align:center;
+    padding:10px;
+    font-size:12px;
+    color:#6f8086;
+  }
+  .ver{
+    position:fixed;
+    top:10px;
+    right:14px;
+    font-size:13px;
+    color:#8aa0a6;
+    letter-spacing:.5px;
+  }
+  .unsupported{
+    color:#ffd9a0;
+    margin-top:18px;
+    font-size:14px;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+  <div class="ver">v1.0</div>
+  <header>
+    <h1>キミの指、しっとりしてる？</h1>
+    <div class="sub">うるおいチェッカー</div>
+  </header>
+  <main>
+    <!-- 接続前 -->
+    <div id="connectArea">
+      <button id="connectBtn">せつぞくする</button>
+      <div class="guide">
+        ボタンをおして、センサーをえらんでね。<br>
+        そのあと、センサーにそっとさわってみよう！
+        <small>※ Chrome か Edge（パソコン）でひらいてね。<br>
+        画面をさいよみこみすると、もういちど「せつぞく」がひつようです。</small>
+      </div>
+      <div id="unsupportedMsg" class="unsupported" style="display:none;">
+        このブラウザは Web Serial に対応していません。<br>
+        パソコンの Chrome または Edge でひらいてください。
+      </div>
+    </div>
+
+    <!-- 接続後 -->
+    <div id="liveArea">
+      <div class="valueLabel">いまの すうち</div>
+      <div id="valueNum">--</div>
+      <div id="rangeNote">0 〜 1023</div>
+      <div class="meterWrap"><div id="meterBar"></div></div>
+      <div id="comment">さあ、センサーにさわってみて！</div>
+      <div id="reconnectNote">うまくいかないときは、画面をさいよみこみして、もういちど「せつぞく」してね。</div>
+    </div>
+  </main>
+  <footer>© SchooMy　fox.schoomy.com</footer>
+
+<script>
+/* =========================================================
+   うるおいチェッカー v1.0
+   オレンジボード 土壌水分センサー(A5) を Web Serial で受信。
+   触ると値が「上がる」前提。生値(0〜1023)をそのまま表示。
+
+   ▼ しきい値（コメント分岐）— 現地で実測して調整してください
+   触っていない待機値〜しっかり触った高い値まで、下から5段階。
+   ========================================================= */
+  const THRESHOLDS = {
+    t1: 100,  // これ未満：待機（さあ、さわってみて！）
+    t2: 300,  // t1〜t2：ちょっとさらさら
+    t3: 500,  // t2〜t3：しっとり
+    t4: 700   // t3〜t4：うるうる／ t4以上：うるおいMAX
+  };
+
+  const COMMENTS = {
+    idle:  "さあ、センサーにさわってみて！",
+    low:   "ちょっとさらさらかな？",
+    mid:   "いいかんじ！しっとりしてるね",
+    high:  "うるうる！みずみずしいね",
+    max:   "うるおいMAX！すごい！"
+  };
+
+  const MAX_RAW = 1023;
+
+  // ---- 要素 ----
+  const connectBtn   = document.getElementById('connectBtn');
+  const connectArea  = document.getElementById('connectArea');
+  const liveArea     = document.getElementById('liveArea');
+  const valueNum     = document.getElementById('valueNum');
+  const meterBar     = document.getElementById('meterBar');
+  const commentEl    = document.getElementById('comment');
+  const unsupportedMsg = document.getElementById('unsupportedMsg');
+
+  // ---- 状態 ----
+  let port = null;
+  let reader = null;
+  let keepReading = false;
+  const window4 = [];          // 移動平均バッファ
+  const SMOOTH_N = 6;          // 直近何件で平均するか
+
+  // Web Serial 非対応ブラウザ
+  if (!('serial' in navigator)) {
+    connectBtn.style.display = 'none';
+    unsupportedMsg.style.display = 'block';
+  }
+
+  connectBtn.addEventListener('click', connect);
+
+  async function connect(){
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 9600 });
+      connectArea.style.display = 'none';
+      liveArea.style.display = 'block';
+      keepReading = true;
+      readLoop();
+    } catch (e) {
+      // ポート選択キャンセル等：そのまま接続前に留まる
+      console.log('接続キャンセルまたは失敗:', e);
+    }
+  }
+
+  async function readLoop(){
+    const textDecoder = new TextDecoderStream();
+    const readableClosed = port.readable.pipeTo(textDecoder.writable).catch(()=>{});
+    reader = textDecoder.readable.getReader();
+    let buffer = '';
+
+    try {
+      while (keepReading) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        buffer += value;
+        // 改行ごとに1数値
+        let idx;
+        while ((idx = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (line === '') continue;
+          const raw = parseInt(line, 10);
+          if (!isNaN(raw)) handleValue(raw);
+        }
+      }
+    } catch (e) {
+      console.log('読み取りエラー:', e);
+    } finally {
+      try { reader.releaseLock(); } catch(_){}
+      await readableClosed;
+    }
+  }
+
+  function handleValue(raw){
+    // 範囲ガード
+    if (raw < 0) raw = 0;
+    if (raw > MAX_RAW) raw = MAX_RAW;
+
+    // 生値はそのまま表示
+    valueNum.textContent = raw;
+
+    // メーター（0〜1023を%に）
+    const pct = Math.round((raw / MAX_RAW) * 100);
+    meterBar.style.width = pct + '%';
+
+    // コメント分岐は移動平均でなめらかに
+    window4.push(raw);
+    if (window4.length > SMOOTH_N) window4.shift();
+    const avg = window4.reduce((a,b)=>a+b,0) / window4.length;
+    updateComment(avg);
+  }
+
+  function updateComment(v){
+    let text, color;
+    if (v < THRESHOLDS.t1)      { text = COMMENTS.idle; color = "#cfd9dd"; }
+    else if (v < THRESHOLDS.t2) { text = COMMENTS.low;  color = "#F5E4C4"; }
+    else if (v < THRESHOLDS.t3) { text = COMMENTS.mid;  color = "#7fd4d1"; }
+    else if (v < THRESHOLDS.t4) { text = COMMENTS.high; color = "#7fd4d1"; }
+    else                        { text = COMMENTS.max;  color = "#ffd27a"; }
+    if (commentEl.textContent !== text){
+      commentEl.textContent = text;
+      commentEl.style.color = color;
+    }
+  }
+</script>
+</body>
+</html>
