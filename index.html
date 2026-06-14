@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>うるおいチェッカー v1.2</title>
+<title>うるおいチェッカー v1.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
@@ -71,17 +71,17 @@
   /* ===== オレンジ枠の中のテキスト ===== */
   #panel{
     position:absolute;
-    left:5%;right:30%;top:79.5%;bottom:4.5%;
+    left:5%;right:33%;top:79.5%;bottom:4.5%;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;color:var(--frame-text);
     padding:0.3% 1%;gap:0.1em;overflow:hidden;
   }
-  #question{font-weight:800;font-size:clamp(12px,1.7vw,22px);line-height:1.05;}
+  #question{font-weight:800;font-size:clamp(10px,1.35vw,18px);line-height:1.05;}
   .numRow{display:flex;align-items:baseline;justify-content:center;gap:0.25em;line-height:1;}
   #valueNum{font-weight:900;font-size:clamp(26px,4.5vw,54px);color:#7a3d00;
     font-variant-numeric:tabular-nums;}
-  .numUnit{font-weight:700;font-size:clamp(10px,1.2vw,16px);color:#8a5520;}
-  #comment{font-weight:800;font-size:clamp(14px,2.1vw,30px);line-height:1.1;min-height:1.1em;}
+  #comment{font-weight:800;font-size:clamp(12px,1.7vw,24px);line-height:1.05;
+    min-height:1.05em;white-space:nowrap;}
 
   .ver{position:fixed;bottom:8px;right:12px;color:#fff;
     font-family:"M PLUS Rounded 1c",sans-serif;font-weight:700;
@@ -99,13 +99,13 @@
     <div id="menuTab">▼</div>
   </div>
 
-  <div class="ver">v1.2</div>
+  <div class="ver">v1.3</div>
   <div id="stage">
     <div id="frameBox">
       <img id="bgImg" src="bg_plaza.png" alt="">
       <div id="panel">
         <div id="question">キミの指、しっとりしてる？</div>
-        <div class="numRow"><span id="valueNum">--</span><span class="numUnit">／1023</span></div>
+        <div class="numRow"><span id="valueNum">--</span></div>
         <div id="comment">さあ、センサーにさわってみて！</div>
       </div>
     </div>
@@ -113,7 +113,7 @@
 
 <script>
 /* =========================================================
-   うるおいチェッカー v1.2
+   うるおいチェッカー v1.3
    - 上部メニュー（普段は三角だけ、押すと せつぞく/デモ が出る）
    - デモ: ランダムに数値が動く（接続なしで動作確認）
    - 実機: 土壌水分センサー(A5) を Web Serial で受信、生値0〜1023
