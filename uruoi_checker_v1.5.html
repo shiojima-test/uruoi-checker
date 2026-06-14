@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>うるおいチェッカー v1.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --frame-text:#5a3000;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"M PLUS Rounded 1c",sans-serif;
+    background:#0e1518;
+    overflow:hidden;
+  }
+
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;background:#0e1518;}
+  #frameBox{position:absolute;top:0;left:0;width:0;height:0;}
+  #bgImg{position:absolute;inset:0;width:100%;height:100%;display:block;
+    user-select:none;-webkit-user-drag:none;}
+
+  /* ===== 上部メニュー（普段は閉じて三角だけ） ===== */
+  #menuWrap{
+    position:fixed;top:0;left:50%;transform:translateX(-50%);
+    z-index:30;display:flex;flex-direction:column;align-items:center;
+  }
+  #menuBar{
+    display:flex;align-items:center;gap:10px;
+    background:rgba(20,28,32,.82);
+    border:1px solid rgba(255,255,255,.18);
+    border-top:none;
+    border-radius:0 0 14px 14px;
+    padding:8px 14px;
+    max-height:0;opacity:0;overflow:hidden;
+    transition:max-height .25s ease,opacity .2s ease,padding .25s ease;
+    padding-top:0;padding-bottom:0;
+  }
+  #menuBar.open{max-height:60px;opacity:1;padding-top:8px;padding-bottom:8px;}
+  .menuBtn{
+    font-family:inherit;font-weight:700;
+    font-size:14px;color:#fff;
+    background:#3AABA8;border:none;border-radius:9px;
+    padding:7px 16px;cursor:pointer;white-space:nowrap;
+    transition:filter .1s;
+  }
+  .menuBtn:hover{filter:brightness(1.08);}
+  .menuBtn.demo{background:#E88A0A;}
+  .menuBtn.demo.on{background:#c0392b;}
+  /* 三角タブ */
+  #menuTab{
+    background:rgba(20,28,32,.82);
+    border:1px solid rgba(255,255,255,.18);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+    color:#fff;font-size:12px;
+    width:46px;height:20px;line-height:18px;text-align:center;
+    cursor:pointer;user-select:none;
+    transition:filter .1s;
+  }
+  #menuTab:hover{filter:brightness(1.2);}
+  #menuStatus{
+    font-size:12px;color:#bcd;white-space:nowrap;
+    font-weight:500;padding-left:2px;
+  }
+
+  /* ===== オレンジ枠の中のテキスト ===== */
+  #panel{
+    position:absolute;
+    left:5%;right:33%;top:75.5%;bottom:7%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:var(--frame-text);
+    padding:0.3% 1%;gap:0.15em;overflow:hidden;
+  }
+  #question{font-weight:800;font-size:clamp(20px,3.2vw,46px);line-height:1.05;}
+  .numRow{display:flex;align-items:baseline;justify-content:center;gap:0.25em;line-height:1;}
+  #valueNum{font-weight:900;font-size:clamp(52px,9.5vw,130px);color:#7a3d00;
+    font-variant-numeric:tabular-nums;}
+  #comment{font-weight:800;font-size:clamp(24px,4vw,58px);line-height:1.05;
+    min-height:1.05em;white-space:nowrap;}
+
+  .ver{position:fixed;bottom:8px;right:12px;color:#fff;
+    font-family:"M PLUS Rounded 1c",sans-serif;font-weight:700;
+    font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);z-index:10;opacity:.85;}
+</style>
+</head>
+<body>
+  <!-- 上部メニュー -->
+  <div id="menuWrap">
+    <div id="menuBar">
+      <button id="connectBtn" class="menuBtn">せつぞく</button>
+      <button id="demoBtn" class="menuBtn demo">デモ</button>
+      <span id="menuStatus">みせつぞく</span>
+    </div>
+    <div id="menuTab">▼</div>
+  </div>
+
+  <div class="ver">v1.5</div>
+  <div id="stage">
+    <div id="frameBox">
+      <img id="bgImg" src="bg_plaza2.png" alt="">
+      <div id="panel">
+        <div id="question">キミの指、しっとりしてる？</div>
+        <div class="numRow"><span id="valueNum">--</span></div>
+        <div id="comment">さあ、センサーにさわってみて！</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   うるおいチェッカー v1.5
+   - 上部メニュー（普段は三角だけ、押すと せつぞく/デモ が出る）
+   - デモ: ランダムに数値が動く（接続なしで動作確認）
+   - 実機: 土壌水分センサー(A5) を Web Serial で受信、生値0〜1023
+   - 触ると値が「上がる」前提
+   ▼ しきい値は現地で実測して調整してください
+   ========================================================= */
+  const THRESHOLDS = { t1:100, t2:300, t3:500, t4:700 };
+  const COMMENTS = {
+    idle:"さあ、センサーにさわってみて！",
+    low: "ちょっとさらさらかな？",
+    mid: "いいかんじ！しっとりしてるね",
+    high:"うるうる！みずみずしいね",
+    max: "うるおいMAX！すごい！"
+  };
+  const MAX_RAW = 1023;
+  const IMG_W = 1800, IMG_H = 3200;
+
+  const frameBox = document.getElementById('frameBox');
+  const valueNum = document.getElementById('valueNum');
+  const commentEl = document.getElementById('comment');
+  const connectBtn = document.getElementById('connectBtn');
+  const demoBtn = document.getElementById('demoBtn');
+  const menuBar = document.getElementById('menuBar');
+  const menuTab = document.getElementById('menuTab');
+  const menuStatus = document.getElementById('menuStatus');
+
+  /* ---- レイアウト（画像で画面を埋める=cover。黒帯なし。
+         はみ出す分は画面外へ。文字は画像基準で重ねるので位置は保たれる） ---- */
+  function layout(){
+    const vw=window.innerWidth, vh=window.innerHeight;
+    const scale=Math.max(vw/IMG_W, vh/IMG_H);   // cover: 大きい方に合わせる
+    const w=IMG_W*scale, h=IMG_H*scale;
+    frameBox.style.width=w+'px'; frameBox.style.height=h+'px';
+    frameBox.style.left=(vw-w)/2+'px'; frameBox.style.top=(vh-h)/2+'px';
+  }
+  window.addEventListener('resize', layout); layout();
+
+  /* ---- メニュー開閉 ---- */
+  let menuOpen=false;
+  menuTab.addEventListener('click', ()=>{
+    menuOpen=!menuOpen;
+    menuBar.classList.toggle('open', menuOpen);
+    menuTab.textContent = menuOpen ? '▲' : '▼';
+  });
+
+  /* ---- 値の反映（共通） ---- */
+  const buf=[]; const SMOOTH_N=6;
+  function applyValue(raw){
+    if(raw<0)raw=0; if(raw>MAX_RAW)raw=MAX_RAW;
+    raw=Math.round(raw);
+    valueNum.textContent=raw;
+    buf.push(raw); if(buf.length>SMOOTH_N) buf.shift();
+    const avg=buf.reduce((a,b)=>a+b,0)/buf.length;
+    let t;
+    if(avg<THRESHOLDS.t1) t=COMMENTS.idle;
+    else if(avg<THRESHOLDS.t2) t=COMMENTS.low;
+    else if(avg<THRESHOLDS.t3) t=COMMENTS.mid;
+    else if(avg<THRESHOLDS.t4) t=COMMENTS.high;
+    else t=COMMENTS.max;
+    if(commentEl.textContent!==t) commentEl.textContent=t;
+  }
+  function resetDisplay(){
+    valueNum.textContent='--'; buf.length=0;
+    commentEl.textContent=COMMENTS.idle;
+  }
+
+  /* ===== デモモード（ランダム） ===== */
+  let demoOn=false, demoTimer=null, demoVal=0, demoTarget=0;
+  function startDemo(){
+    stopSerial();           // 実機と排他
+    demoOn=true;
+    demoBtn.classList.add('on'); demoBtn.textContent='デモ停止';
+    menuStatus.textContent='デモ中';
+    demoVal=0; demoTarget=Math.random()*MAX_RAW;
+    demoTimer=setInterval(()=>{
+      // ターゲットに少しずつ近づけて、たまに新しいターゲットへ（自然な揺れ）
+      if(Math.random()<0.04 || Math.abs(demoVal-demoTarget)<15){
+        demoTarget=Math.random()*MAX_RAW;
+      }
+      demoVal += (demoTarget-demoVal)*0.12 + (Math.random()*20-10);
+      applyValue(demoVal);
+    },120);
+  }
+  function stopDemo(){
+    demoOn=false;
+    if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+    demoBtn.classList.remove('on'); demoBtn.textContent='デモ';
+    menuStatus.textContent = serialOn ? 'せつぞく中' : 'みせつぞく';
+    if(!serialOn) resetDisplay();
+  }
+  demoBtn.addEventListener('click', ()=>{ demoOn?stopDemo():startDemo(); });
+
+  /* ===== 実機 Web Serial ===== */
+  let port=null, reader=null, serialOn=false, keepReading=false;
+  if(!('serial' in navigator)){
+    connectBtn.disabled=true;
+    connectBtn.textContent='Serial非対応';
+    connectBtn.style.background='#888';
+  }
+  connectBtn.addEventListener('click', connect);
+
+  async function connect(){
+    if(demoOn) stopDemo();
+    try{
+      port=await navigator.serial.requestPort();
+      await port.open({baudRate:9600});
+      serialOn=true; keepReading=true;
+      menuStatus.textContent='せつぞく中';
+      buf.length=0;
+      readLoop();
+    }catch(e){ console.log('接続キャンセル/失敗',e); }
+  }
+  function stopSerial(){
+    keepReading=false;
+    if(reader){ try{reader.cancel();}catch(_){ } }
+    serialOn=false;
+  }
+  async function readLoop(){
+    const dec=new TextDecoderStream();
+    const closed=port.readable.pipeTo(dec.writable).catch(()=>{});
+    reader=dec.readable.getReader();
+    let s='';
+    try{
+      while(keepReading){
+        const {value,done}=await reader.read();
+        if(done) break;
+        if(!value) continue;
+        s+=value; let i;
+        while((i=s.indexOf('\n'))>=0){
+          const line=s.slice(0,i).trim(); s=s.slice(i+1);
+          if(line==='') continue;
+          const raw=parseInt(line,10);
+          if(!isNaN(raw) && !demoOn) applyValue(raw);
+        }
+      }
+    }catch(e){ console.log('読取エラー',e); }
+    finally{ try{reader.releaseLock();}catch(_){} await closed; }
+  }
+</script>
+</body>
+</html>
