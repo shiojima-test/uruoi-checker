@@ -3,326 +3,252 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>うるおいチェッカー v1.0</title>
+<title>うるおいチェッカー v1.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --teal:#3AABA8;
-    --cream:#F5E4C4;
-    --orange:#E88A0A;
-    --blue:#2E8EC4;
-    --dark:#1f2a30;
-    --dark2:#2d3439;
+    --frame-text:#5a3000;   /* オレンジ枠の中の文字色（濃い茶系で読みやすく） */
+    --accent:#1f2a30;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
   body{
-    font-family:"Meiryo","メイリオ",sans-serif;
-    background:linear-gradient(160deg,var(--dark) 0%,var(--dark2) 100%);
-    color:#fff;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
+    font-family:"M PLUS Rounded 1c",sans-serif;
+    background:#0e1518;
     overflow:hidden;
   }
-  header{
+
+  /* 画面いっぱいに画像全体を表示（縦横どちらでも全体が見える） */
+  #stage{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    background:#0e1518;
+  }
+  /* 画像の実寸比に合わせた箱。中の文字は画像に対する%で配置するので、
+     この箱を画像とぴったり同じ位置・サイズにする。 */
+  #frameBox{
+    position:absolute;
+    /* JSで画像の表示領域に合わせて設定 */
+    top:0;left:0;width:0;height:0;
+  }
+  #bgImg{
+    position:absolute;
+    inset:0;
     width:100%;
-    text-align:center;
-    padding:28px 16px 18px;
+    height:100%;
+    display:block;
+    user-select:none;
+    -webkit-user-drag:none;
   }
-  h1{
-    margin:0;
-    font-size:clamp(28px,5vw,52px);
-    color:var(--cream);
-    letter-spacing:1px;
-    text-shadow:0 2px 8px rgba(0,0,0,.4);
-  }
-  .sub{
-    margin-top:8px;
-    font-size:clamp(14px,2.2vw,20px);
-    color:var(--teal);
-    font-weight:bold;
-  }
-  main{
-    flex:1;
-    width:100%;
-    max-width:760px;
+
+  /* ===== オレンジ枠の中だけに置くテキストエリア =====
+     画像内の枠の「塗り部分」実測（画像1200x1698基準）:
+       縦 上端 約78.4%(y=1332) 〜 下端 約96.6%(y=1641)  ← 高さ約18%の帯
+       横 左端 約4% 〜 右端は女の子の頭がかぶるため文字は左寄り
+     この狭い帯に収まるよう、要素を詰めて配置する。 */
+  #panel{
+    position:absolute;
+    left:5%;
+    right:30%;          /* 右端70%まで（女の子を避ける） */
+    top:79.5%;          /* 枠塗り上端78.4%の少し内側 */
+    bottom:4.5%;        /* 枠塗り下端96.6%の少し内側=95.5% */
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    padding:10px 20px 30px;
-  }
-  /* 接続前のガイド */
-  #connectArea{
     text-align:center;
+    color:var(--frame-text);
+    padding:0.3% 1%;
+    gap:0.1em;
+    overflow:hidden;
   }
+
+  /* 接続前のボタン（枠の中に置く） */
   #connectBtn{
     font-family:inherit;
-    font-size:clamp(20px,3.4vw,30px);
-    font-weight:bold;
+    font-weight:800;
+    font-size:clamp(16px,2.4vw,30px);
     color:#fff;
-    background:var(--orange);
-    border:none;
-    border-radius:18px;
-    padding:22px 46px;
+    background:#E88A0A;
+    border:3px solid #fff;
+    border-radius:14px;
+    padding:0.5em 1.2em;
     cursor:pointer;
-    box-shadow:0 6px 0 #b56b06,0 10px 20px rgba(0,0,0,.35);
-    transition:transform .08s ease, box-shadow .08s ease;
+    box-shadow:0 4px 0 #b56b06;
+    transition:transform .08s,box-shadow .08s;
+    line-height:1.2;
   }
-  #connectBtn:active{
-    transform:translateY(4px);
-    box-shadow:0 2px 0 #b56b06,0 5px 12px rgba(0,0,0,.35);
+  #connectBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #b56b06;}
+  #connectGuide{
+    font-weight:700;
+    font-size:clamp(11px,1.5vw,18px);
+    color:var(--frame-text);
+    line-height:1.5;
   }
-  .guide{
-    margin-top:26px;
-    font-size:clamp(15px,2.4vw,21px);
-    line-height:1.7;
-    color:#e9eef0;
+
+  /* 接続後 */
+  #liveArea{display:none;width:100%;height:100%;
+    flex-direction:column;align-items:center;justify-content:center;gap:0.05em;}
+  #question{
+    font-weight:800;
+    font-size:clamp(12px,1.7vw,22px);
+    line-height:1.05;
   }
-  .guide small{
-    display:block;
-    margin-top:14px;
-    font-size:clamp(12px,1.8vw,15px);
-    color:#9fb2b8;
-  }
-  /* 接続後のメイン表示 */
-  #liveArea{
-    display:none;
-    width:100%;
-    text-align:center;
-  }
-  .meterWrap{
-    width:100%;
-    max-width:560px;
-    margin:0 auto 22px;
-    background:rgba(255,255,255,.08);
-    border-radius:20px;
-    overflow:hidden;
-    height:34px;
-    border:2px solid rgba(255,255,255,.15);
-  }
-  #meterBar{
-    height:100%;
-    width:0%;
-    background:linear-gradient(90deg,var(--blue),var(--teal));
-    transition:width .18s ease;
-  }
-  .valueLabel{
-    font-size:clamp(15px,2.2vw,20px);
-    color:var(--teal);
-    font-weight:bold;
-    margin-bottom:4px;
+  .numRow{
+    display:flex;align-items:baseline;justify-content:center;gap:0.25em;
+    line-height:1;
   }
   #valueNum{
-    font-size:clamp(70px,16vw,150px);
     font-weight:900;
-    line-height:1;
-    color:#fff;
-    text-shadow:0 4px 16px rgba(0,0,0,.4);
+    font-size:clamp(26px,4.5vw,54px);
+    color:#7a3d00;
     font-variant-numeric:tabular-nums;
   }
-  #rangeNote{
-    font-size:clamp(12px,1.8vw,15px);
-    color:#9fb2b8;
-    margin-top:2px;
-  }
+  .numUnit{font-weight:700;font-size:clamp(10px,1.2vw,16px);color:#8a5520;}
   #comment{
-    margin-top:26px;
-    font-size:clamp(26px,5vw,46px);
-    font-weight:bold;
-    color:var(--cream);
-    min-height:1.4em;
-    transition:color .2s ease;
-    text-shadow:0 2px 8px rgba(0,0,0,.35);
+    font-weight:800;
+    font-size:clamp(14px,2.1vw,30px);
+    line-height:1.1;
+    min-height:1.1em;
   }
-  #reconnectNote{
-    margin-top:30px;
-    font-size:clamp(11px,1.7vw,14px);
-    color:#7e9197;
-  }
-  footer{
-    width:100%;
-    text-align:center;
-    padding:10px;
-    font-size:12px;
-    color:#6f8086;
-  }
-  .ver{
-    position:fixed;
-    top:10px;
-    right:14px;
-    font-size:13px;
-    color:#8aa0a6;
-    letter-spacing:.5px;
-  }
-  .unsupported{
-    color:#ffd9a0;
-    margin-top:18px;
-    font-size:14px;
-    line-height:1.6;
-  }
+
+  #unsupported{display:none;font-weight:700;color:#7a3d00;
+    font-size:clamp(12px,1.6vw,18px);line-height:1.5;}
+
+  .ver{position:fixed;top:8px;right:12px;color:#fff;
+    font-family:"M PLUS Rounded 1c",sans-serif;font-weight:700;
+    font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);z-index:10;}
 </style>
 </head>
 <body>
-  <div class="ver">v1.0</div>
-  <header>
-    <h1>キミの指、しっとりしてる？</h1>
-    <div class="sub">うるおいチェッカー</div>
-  </header>
-  <main>
-    <!-- 接続前 -->
-    <div id="connectArea">
-      <button id="connectBtn">せつぞくする</button>
-      <div class="guide">
-        ボタンをおして、センサーをえらんでね。<br>
-        そのあと、センサーにそっとさわってみよう！
-        <small>※ Chrome か Edge（パソコン）でひらいてね。<br>
-        画面をさいよみこみすると、もういちど「せつぞく」がひつようです。</small>
-      </div>
-      <div id="unsupportedMsg" class="unsupported" style="display:none;">
-        このブラウザは Web Serial に対応していません。<br>
-        パソコンの Chrome または Edge でひらいてください。
+  <div class="ver">v1.1</div>
+  <div id="stage">
+    <div id="frameBox">
+      <img id="bgImg" src="bg_plaza.png" alt="">
+      <!-- オレンジ枠の中だけに表示するパネル -->
+      <div id="panel">
+        <!-- 接続前 -->
+        <div id="connectArea" style="display:flex;flex-direction:column;align-items:center;gap:0.5em;">
+          <button id="connectBtn">せつぞくする</button>
+          <div id="connectGuide">ボタンをおして、<br>センサーにさわってね</div>
+          <div id="unsupported">パソコンの Chrome か Edge でひらいてね</div>
+        </div>
+        <!-- 接続後 -->
+        <div id="liveArea">
+          <div id="question">キミの指、しっとりしてる？</div>
+          <div class="numRow"><span id="valueNum">--</span><span class="numUnit">／1023</span></div>
+          <div id="comment">さあ、センサーにさわってみて！</div>
+        </div>
       </div>
     </div>
-
-    <!-- 接続後 -->
-    <div id="liveArea">
-      <div class="valueLabel">いまの すうち</div>
-      <div id="valueNum">--</div>
-      <div id="rangeNote">0 〜 1023</div>
-      <div class="meterWrap"><div id="meterBar"></div></div>
-      <div id="comment">さあ、センサーにさわってみて！</div>
-      <div id="reconnectNote">うまくいかないときは、画面をさいよみこみして、もういちど「せつぞく」してね。</div>
-    </div>
-  </main>
-  <footer>© SchooMy　fox.schoomy.com</footer>
+  </div>
 
 <script>
 /* =========================================================
-   うるおいチェッカー v1.0
-   オレンジボード 土壌水分センサー(A5) を Web Serial で受信。
-   触ると値が「上がる」前提。生値(0〜1023)をそのまま表示。
-
-   ▼ しきい値（コメント分岐）— 現地で実測して調整してください
-   触っていない待機値〜しっかり触った高い値まで、下から5段階。
+   うるおいチェッカー v1.1
+   - 背景: bg_plaza.png（画面いっぱいに全体表示。横でも縦でもOK）
+   - 文字はオレンジ枠の中(#panel)だけに表示
+   - 土壌水分センサー(A5) を Web Serial で受信、生値0〜1023を表示
+   - 触ると値が「上がる」前提
+   ▼ しきい値は現地で実測して調整してください
    ========================================================= */
-  const THRESHOLDS = {
-    t1: 100,  // これ未満：待機（さあ、さわってみて！）
-    t2: 300,  // t1〜t2：ちょっとさらさら
-    t3: 500,  // t2〜t3：しっとり
-    t4: 700   // t3〜t4：うるうる／ t4以上：うるおいMAX
-  };
-
+  const THRESHOLDS = { t1:100, t2:300, t3:500, t4:700 };
   const COMMENTS = {
-    idle:  "さあ、センサーにさわってみて！",
-    low:   "ちょっとさらさらかな？",
-    mid:   "いいかんじ！しっとりしてるね",
-    high:  "うるうる！みずみずしいね",
-    max:   "うるおいMAX！すごい！"
+    idle:"さあ、センサーにさわってみて！",
+    low: "ちょっとさらさらかな？",
+    mid: "いいかんじ！しっとりしてるね",
+    high:"うるうる！みずみずしいね",
+    max: "うるおいMAX！すごい！"
   };
-
   const MAX_RAW = 1023;
+  const IMG_W = 1200, IMG_H = 1698;   // 背景画像の実寸
 
-  // ---- 要素 ----
-  const connectBtn   = document.getElementById('connectBtn');
-  const connectArea  = document.getElementById('connectArea');
-  const liveArea     = document.getElementById('liveArea');
-  const valueNum     = document.getElementById('valueNum');
-  const meterBar     = document.getElementById('meterBar');
-  const commentEl    = document.getElementById('comment');
-  const unsupportedMsg = document.getElementById('unsupportedMsg');
+  const frameBox = document.getElementById('frameBox');
+  const connectBtn = document.getElementById('connectBtn');
+  const connectArea = document.getElementById('connectArea');
+  const liveArea = document.getElementById('liveArea');
+  const valueNum = document.getElementById('valueNum');
+  const commentEl = document.getElementById('comment');
+  const unsupported = document.getElementById('unsupported');
 
-  // ---- 状態 ----
-  let port = null;
-  let reader = null;
-  let keepReading = false;
-  const window4 = [];          // 移動平均バッファ
-  const SMOOTH_N = 6;          // 直近何件で平均するか
-
-  // Web Serial 非対応ブラウザ
-  if (!('serial' in navigator)) {
-    connectBtn.style.display = 'none';
-    unsupportedMsg.style.display = 'block';
+  // ---- 画像を画面に「全体表示」しつつ、文字を画像基準で正確に重ねる ----
+  // frameBox を、画像がcontain表示される実際の矩形に合わせる
+  function layout(){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const scale = Math.min(vw/IMG_W, vh/IMG_H);
+    const w = IMG_W*scale, h = IMG_H*scale;
+    frameBox.style.width = w+'px';
+    frameBox.style.height = h+'px';
+    frameBox.style.left = (vw-w)/2+'px';
+    frameBox.style.top  = (vh-h)/2+'px';
   }
+  window.addEventListener('resize', layout);
+  layout();
 
+  // ---- Web Serial ----
+  let port=null, reader=null, keepReading=false;
+  const buf=[]; const SMOOTH_N=6;
+
+  if(!('serial' in navigator)){
+    connectBtn.style.display='none';
+    unsupported.style.display='block';
+  }
   connectBtn.addEventListener('click', connect);
 
   async function connect(){
-    try {
+    try{
       port = await navigator.serial.requestPort();
-      await port.open({ baudRate: 9600 });
-      connectArea.style.display = 'none';
-      liveArea.style.display = 'block';
-      keepReading = true;
+      await port.open({baudRate:9600});
+      connectArea.style.display='none';
+      liveArea.style.display='flex';
+      keepReading=true;
       readLoop();
-    } catch (e) {
-      // ポート選択キャンセル等：そのまま接続前に留まる
-      console.log('接続キャンセルまたは失敗:', e);
-    }
+    }catch(e){ console.log('接続キャンセル/失敗',e); }
   }
 
   async function readLoop(){
-    const textDecoder = new TextDecoderStream();
-    const readableClosed = port.readable.pipeTo(textDecoder.writable).catch(()=>{});
-    reader = textDecoder.readable.getReader();
-    let buffer = '';
-
-    try {
-      while (keepReading) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (!value) continue;
-        buffer += value;
-        // 改行ごとに1数値
-        let idx;
-        while ((idx = buffer.indexOf('\n')) >= 0) {
-          const line = buffer.slice(0, idx).trim();
-          buffer = buffer.slice(idx + 1);
-          if (line === '') continue;
-          const raw = parseInt(line, 10);
-          if (!isNaN(raw)) handleValue(raw);
+    const dec=new TextDecoderStream();
+    const closed=port.readable.pipeTo(dec.writable).catch(()=>{});
+    reader=dec.readable.getReader();
+    let s='';
+    try{
+      while(keepReading){
+        const {value,done}=await reader.read();
+        if(done) break;
+        if(!value) continue;
+        s+=value;
+        let i;
+        while((i=s.indexOf('\n'))>=0){
+          const line=s.slice(0,i).trim(); s=s.slice(i+1);
+          if(line==='') continue;
+          const raw=parseInt(line,10);
+          if(!isNaN(raw)) handleValue(raw);
         }
       }
-    } catch (e) {
-      console.log('読み取りエラー:', e);
-    } finally {
-      try { reader.releaseLock(); } catch(_){}
-      await readableClosed;
-    }
+    }catch(e){ console.log('読取エラー',e); }
+    finally{ try{reader.releaseLock();}catch(_){} await closed; }
   }
 
   function handleValue(raw){
-    // 範囲ガード
-    if (raw < 0) raw = 0;
-    if (raw > MAX_RAW) raw = MAX_RAW;
-
-    // 生値はそのまま表示
-    valueNum.textContent = raw;
-
-    // メーター（0〜1023を%に）
-    const pct = Math.round((raw / MAX_RAW) * 100);
-    meterBar.style.width = pct + '%';
-
-    // コメント分岐は移動平均でなめらかに
-    window4.push(raw);
-    if (window4.length > SMOOTH_N) window4.shift();
-    const avg = window4.reduce((a,b)=>a+b,0) / window4.length;
+    if(raw<0)raw=0; if(raw>MAX_RAW)raw=MAX_RAW;
+    valueNum.textContent=raw;
+    buf.push(raw); if(buf.length>SMOOTH_N) buf.shift();
+    const avg=buf.reduce((a,b)=>a+b,0)/buf.length;
     updateComment(avg);
   }
 
   function updateComment(v){
-    let text, color;
-    if (v < THRESHOLDS.t1)      { text = COMMENTS.idle; color = "#cfd9dd"; }
-    else if (v < THRESHOLDS.t2) { text = COMMENTS.low;  color = "#F5E4C4"; }
-    else if (v < THRESHOLDS.t3) { text = COMMENTS.mid;  color = "#7fd4d1"; }
-    else if (v < THRESHOLDS.t4) { text = COMMENTS.high; color = "#7fd4d1"; }
-    else                        { text = COMMENTS.max;  color = "#ffd27a"; }
-    if (commentEl.textContent !== text){
-      commentEl.textContent = text;
-      commentEl.style.color = color;
-    }
+    let t;
+    if(v<THRESHOLDS.t1) t=COMMENTS.idle;
+    else if(v<THRESHOLDS.t2) t=COMMENTS.low;
+    else if(v<THRESHOLDS.t3) t=COMMENTS.mid;
+    else if(v<THRESHOLDS.t4) t=COMMENTS.high;
+    else t=COMMENTS.max;
+    if(commentEl.textContent!==t) commentEl.textContent=t;
   }
 </script>
 </body>
